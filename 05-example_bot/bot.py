@@ -101,9 +101,21 @@ def call_model(messages: list[dict]) -> str:
             return ollama.chat(model=OLLAMA_MODEL, messages=messages).message.content
 
         # ── RU: облако — Gemini (для деплоя) / EN: cloud — Gemini (for deploy) ──
-        key = os.getenv("GOOGLE_API_KEY")
-        if not key or "..." in key:
-            return "⚠️ Нет GOOGLE_API_KEY в .env (нужен для PROVIDER='gemini' / деплоя)."
+        key = (os.getenv("GOOGLE_API_KEY") or "").strip()
+        if not key:
+            key = (os.getenv("GEMINI_API_KEY") or "").strip()
+        if not key or "..." in key or "…" in key:
+            if not key:
+                configured = any(name in os.environ for name in ("GOOGLE_API_KEY", "GEMINI_API_KEY"))
+                reason = "Переменная ключа есть, но её значение пустое." if configured else "Переменные GOOGLE_API_KEY и GEMINI_API_KEY отсутствуют в запущенном сервисе."
+            else:
+                reason = "Значение ключа содержит многоточие: вставлен сокращённый ключ или шаблон."
+            return (
+                f"⚠️ Настройка Gemini: {reason} "
+                "В Render откройте Barber-AI → Environment, добавьте GOOGLE_API_KEY "
+                "с полным ключом, затем Save and deploy и дождитесь нового Live. "
+                "Файл .env на Render не требуется."
+            )
         client = OpenAI(
             api_key=key,
             base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
